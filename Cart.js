@@ -1,7 +1,8 @@
-import React, {useState, forwardRef, useEffect} from "react";
+import React, {useState, useEffect} from "react";
 import {View, Text, Image, StyleSheet, Pressable, ScrollView, Modal, Alert, TextInput} from "react-native";
 import {initializeApp} from "firebase/app";
 import {initializeFirestore, collection, query, where, getDocs} from 'firebase/firestore';
+import Scanner from './Scanner';
 
 import productBoxImg from "./images/product.png";
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -25,7 +26,6 @@ const firestore = initializeFirestore(app, {
 });
 
 const CartItem = (props) => {
-  //const [itemQuantity, setItemQuantity] = useState(props.quantity);
 
   const handleRemove = () => {
     console.log('handleRemove(',props.index,')');
@@ -35,7 +35,6 @@ const CartItem = (props) => {
   const handleIncrease =()=>{
     console.log('handleIncrease(',props.index,')');
     props.increaseQuantityCallback(props.index);
-    //setItemQuantity(itemQuantity+1);
   }
 
   const handleDecrease = () => {
@@ -46,14 +45,6 @@ const CartItem = (props) => {
     }else {
       props.decreaseQuantityCallback(props.index);
     }
-
-    // if(itemQuantity-1<=0){
-    //   handleRemove();
-    // }else {
-    //   props.decreaseQuantityCallback(props.index);
-    //   setItemQuantity(itemQuantity-1);
-    // }
-
   }
 
   return <View style={styles.cartItem}>
@@ -99,10 +90,11 @@ const CartItem = (props) => {
   </View>
 }
 
-const Cart = forwardRef((props, ref) => {
+const Cart = (props) => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [activeScanner, setActiveScanner] = useState(false);
 
-  const [barcode, onChangeBarcode] = useState(null);
+  const [barcode, setBarcode] = useState(null);
   const [newProduct, setNewProduct] = useState({
     productName:'',
     unitPrice:0,
@@ -149,7 +141,7 @@ const Cart = forwardRef((props, ref) => {
     }
 
     setCartItems(newCartItems);
-    setModalVisible(!modalVisible);
+    setModalVisible(false);
   }
 
   const IncreaseQuantity = (i) => {
@@ -190,6 +182,10 @@ const Cart = forwardRef((props, ref) => {
       />)
     )
     return temp;
+  }
+
+  if(activeScanner){
+    return <Scanner setScannerActiveCallback={setActiveScanner} setBarcodeCallback={setBarcode} addProductCallback={AddProduct} />;
   }
 
   return <View style={{flex: 1}}>
@@ -242,11 +238,11 @@ const Cart = forwardRef((props, ref) => {
     <View style={styles.footer}>
       <TextInput
         style={styles.input}
-        onChangeText={onChangeBarcode}
+        onChangeText={setBarcode}
         placeholder="รหัสสินค้า"
         keyboardType="numeric"
       />
-      <Pressable style={styles.scanButton} onPress={() => HandleSearch()}>
+      <Pressable style={styles.scanButton} onPress={() => setActiveScanner(true)}>
         <Icon name="barcode" size={24} color="#006400"/>
       </Pressable>
       <Pressable style={styles.searchButton} onPress={() => HandleSearch()}>
@@ -254,7 +250,7 @@ const Cart = forwardRef((props, ref) => {
       </Pressable>
     </View>
   </View>
-});
+};
 
 
 export default Cart;
