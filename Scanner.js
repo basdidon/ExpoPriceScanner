@@ -15,10 +15,9 @@ const Scanner = (props) => {
   }, []);
 
   const handleBarCodeScanned = ({ type, data }) => {
-    props.setBarcodeCallback(data);
-    props.addProductCallback();
+    props.scannerSearchCallback(data);
     setScanned(true);
-    alert(`Bar code with type ${type} and data ${data} has been scanned!`);
+    props.setModalVisibleCallback(true);
   };
 
   if (hasPermission === null) {
@@ -34,7 +33,6 @@ const Scanner = (props) => {
         <Text style={{fontSize: 24, fontWeight: "bold"}}>สแกนบาร์โค้ด</Text>
       </View>
       <View style={styles.container}>
-        {/*<Text>hi</Text>*/}
         <BarCodeScanner
           onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
           style={styles.camera}

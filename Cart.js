@@ -1,8 +1,9 @@
 import React, {useState, useEffect} from "react";
-import {View, Text, Image, StyleSheet, Pressable, ScrollView, Modal, Alert, TextInput} from "react-native";
+import {View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, TextInput} from "react-native";
 import {initializeApp} from "firebase/app";
 import {initializeFirestore, collection, query, where, getDocs} from 'firebase/firestore';
 import Scanner from './Scanner';
+import AddProductModal from './AddProductModal';
 
 import productBoxImg from "./images/product.png";
 import Icon from 'react-native-vector-icons/FontAwesome';
@@ -63,17 +64,17 @@ const CartItem = (props) => {
           flexGrow: 1,
           maxWidth: 260
         }}>{props.item.productName}</Text>
-        <Pressable onPress={()=>{handleRemove()}}>
+        <TouchableOpacity onPress={()=>{handleRemove()}}>
           <Icon name={'close'} color={'red'} size={24} style={{padding:2}}/>
-        </Pressable>
+        </TouchableOpacity>
       </View>
       <View style={{flexDirection: 'row', flexGrow: 1}}>
         <View style={{flexDirection: 'column', flexGrow: 3, justifyContent: 'space-around',padding:4}}>
           <Text>{props.item.unitPrice} ฿</Text>
           <View style={{flexDirection: 'row',justifyContent:'space-around' ,paddingHorizontal:4 ,paddingVertical:4}}>
-            <Pressable onPress={()=>handleDecrease()}><Icon name={'minus'} size={16} color="white" style={{backgroundColor:'#ff0000',paddingHorizontal:6,paddingVertical:5, borderRadius:12}}/></Pressable>
+            <TouchableOpacity onPress={()=>handleDecrease()}><Icon name={'minus'} size={16} color="white" style={{backgroundColor:'#ff0000',paddingHorizontal:6,paddingVertical:5, borderRadius:12}}/></TouchableOpacity>
             <Text>{props.item.quantity}</Text>
-            <Pressable onPress={()=>handleIncrease()}><Icon name={'plus'} size={16} color="white" style={{backgroundColor:'#ff0000',paddingHorizontal:6,paddingVertical:5, borderRadius:12}}/></Pressable>
+            <TouchableOpacity onPress={()=>handleIncrease()}><Icon name={'plus'} size={16} color="white" style={{backgroundColor:'#ff0000',paddingHorizontal:6,paddingVertical:5, borderRadius:12}}/></TouchableOpacity>
           </View>
         </View>
         <View style={{
@@ -102,6 +103,29 @@ const Cart = (props) => {
   });
   const [cartItems, setCartItems] = useState([]);
 
+  const ScannerSearch = async (value) => {
+    console.log('HandleSearch with : ' + value);
+
+    const dbRef = collection(firestore, 'Products');
+    const dataQuery = query(dbRef, where('productId', '==', value));
+    const snapshot = await getDocs(dataQuery);
+
+    if (snapshot.empty) {
+      console.log('snapshot is empty.');
+    } else {
+      snapshot.forEach(item => {
+        setNewProduct({
+          productName:item.data().productName,
+          unitPrice:item.data().salePrice,
+          quantity:1
+        })
+        console.log(item.data().productName);
+        console.log(item.data().salePrice);
+      })
+      setModalVisible(true);
+    }
+  }
+
   const HandleSearch = async () => {
     console.log('HandleSearch with : ' + barcode);
 
@@ -116,7 +140,7 @@ const Cart = (props) => {
         setNewProduct({
           productName:item.data().productName,
           unitPrice:item.data().salePrice,
-          quantity:1,
+          quantity:1
         })
         console.log(item.data().productName);
         console.log(item.data().salePrice);
@@ -142,6 +166,13 @@ const Cart = (props) => {
 
     setCartItems(newCartItems);
     setModalVisible(false);
+  }
+
+  const SetNewProductQuantity=(value)=>{
+    console.log('SetNewProductQuantity')
+    const _newProduct = newProduct;
+    _newProduct.quantity = value;
+    setNewProduct(_newProduct);
   }
 
   const IncreaseQuantity = (i) => {
@@ -185,7 +216,16 @@ const Cart = (props) => {
   }
 
   if(activeScanner){
-    return <Scanner setScannerActiveCallback={setActiveScanner} setBarcodeCallback={setBarcode} addProductCallback={AddProduct} />;
+    return     <View style={{flex:1}}>
+      <Scanner setScannerActiveCallback={setActiveScanner} scannerSearchCallback={ScannerSearch} addProductCallback={AddProduct} setModalVisibleCallback={setModalVisible}/>
+      <AddProductModal
+        setVisibleCallback={setModalVisible}
+        isVisible={modalVisible}
+        newProduct={newProduct}
+        addProductCallback={AddProduct}
+        setQuantityCallback={SetNewProductQuantity}
+      />
+    </View>
   }
 
   return <View style={{flex: 1}}>
@@ -194,33 +234,13 @@ const Cart = (props) => {
         <Text style={{fontSize: 24, fontWeight: "bold"}}>ตะกร้าสินค้า</Text>
       </View>
       <View style={styles.container}>
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => {
-            Alert.alert("Modal has been closed.");
-            setModalVisible(!modalVisible);
-          }}
-        >
-          <View style={styles.modalView}>
-            <Text style={styles.modalHeader}>{newProduct.productName}</Text>
-            <Text style={styles.modalText}>{newProduct.unitPrice} บาท</Text>
-            <Pressable
-              style={[styles.button, {backgroundColor: 'green'}]}
-              onPress={() => AddProduct()}
-            >
-              <Text>เพิ่มลงในตะกร้า</Text>
-            </Pressable>
-            <Pressable
-              style={[styles.button, styles.buttonClose]}
-              onPress={() => setModalVisible(!modalVisible)}
-            >
-              <Text style={styles.textStyle}>ปิด</Text>
-            </Pressable>
-          </View>
-        </Modal>
-
+        <AddProductModal
+          setVisibleCallback={setModalVisible}
+          isVisible={modalVisible}
+          newProduct={newProduct}
+          addProductCallback={AddProduct}
+          setQuantityCallback={SetNewProductQuantity}
+        />
         {cartItems.length <= 0 ? <Text style={{
           alignSelf: 'center',
           marginTop: 360,
@@ -242,12 +262,12 @@ const Cart = (props) => {
         placeholder="รหัสสินค้า"
         keyboardType="numeric"
       />
-      <Pressable style={styles.scanButton} onPress={() => setActiveScanner(true)}>
+      <TouchableOpacity style={styles.scanButton} onPress={() => setActiveScanner(true)}>
         <Icon name="barcode" size={24} color="#006400"/>
-      </Pressable>
-      <Pressable style={styles.searchButton} onPress={() => HandleSearch()}>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.searchButton} onPress={() => HandleSearch()}>
         <Text style={styles.textStyle}>ค้นหา</Text>
-      </Pressable>
+      </TouchableOpacity>
     </View>
   </View>
 };
@@ -315,49 +335,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexGrow: 1,
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: "skyblue",
-    borderRadius: 20,
-    padding: 35,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5
-  },
-  button: {
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonOpen: {
-    backgroundColor: "#F194FF",
-  },
-  buttonClose: {
-    paddingHorizontal: 50,
-    backgroundColor: "#ff0000",
-  },
   textStyle: {
     color: "white",
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 16,
-  },
-  modalHeader: {
-    fontSize: 26,
-    marginBottom: 15,
-    textAlign: "center"
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: "center"
   },
   divider: {
     borderBottomColor: 'black',
